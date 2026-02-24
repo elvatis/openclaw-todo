@@ -98,55 +98,58 @@ export default function register(api: any) {
   api.registerCommand({
     name: "todo-list",
     description: "List open TODO items",
-    usage: "/todo-list",
-    run: async () => {
+    requireAuth: false,
+    acceptsArgs: false,
+    handler: async () => {
       const md = fs.readFileSync(todoFile, "utf-8");
       const todos = parseTodos(md).filter((t) => !t.done);
       const top = todos.slice(0, maxListItems);
-      if (top.length === 0) return { ok: true, message: "No open TODOs." };
+      if (top.length === 0) return { text: "No open TODOs." };
       const lines = top.map((t, idx) => `${idx + 1}. ${t.text}`);
-      return { ok: true, message: `Open TODOs (${todos.length}):\n` + lines.join("\n") };
+      return { text: `Open TODOs (${todos.length}):\n` + lines.join("\n") };
     },
   });
 
   api.registerCommand({
     name: "todo-add",
     description: "Add a TODO item",
-    usage: "/todo-add <text>",
-    run: async (ctx: any) => {
-      const text = (ctx?.argsText ?? "").trim();
-      if (!text) return { ok: true, message: "Usage: /todo-add <text>" };
+    requireAuth: false,
+    acceptsArgs: true,
+    handler: async (ctx: any) => {
+      const text = String(ctx?.args ?? "").trim();
+      if (!text) return { text: "Usage: /todo-add <text>" };
 
       const md = fs.readFileSync(todoFile, "utf-8");
       const next = addTodo(md, text);
       fs.writeFileSync(todoFile, next, "utf-8");
 
       if (doBrainLog) await brainLog(brainStorePath, `added - ${text}`);
-      return { ok: true, message: `Added TODO: ${text}` };
+      return { text: `Added TODO: ${text}` };
     },
   });
 
   api.registerCommand({
     name: "todo-done",
     description: "Mark a TODO item done",
-    usage: "/todo-done <index>",
-    run: async (ctx: any) => {
-      const idxStr = (ctx?.argsText ?? "").trim();
+    requireAuth: false,
+    acceptsArgs: true,
+    handler: async (ctx: any) => {
+      const idxStr = String(ctx?.args ?? "").trim();
       const idx = Number(idxStr);
       if (!idxStr || !Number.isFinite(idx) || idx < 1) {
-        return { ok: true, message: "Usage: /todo-done <index> (see /todo-list)" };
+        return { text: "Usage: /todo-done <index> (see /todo-list)" };
       }
 
       const md = fs.readFileSync(todoFile, "utf-8");
       const open = parseTodos(md).filter((t) => !t.done);
       const item = open[idx - 1];
-      if (!item) return { ok: true, message: `No open TODO at index ${idx}.` };
+      if (!item) return { text: `No open TODO at index ${idx}.` };
 
       const next = markDone(md, item);
       fs.writeFileSync(todoFile, next, "utf-8");
 
       if (doBrainLog) await brainLog(brainStorePath, `done - ${item.text}`);
-      return { ok: true, message: `Done: ${item.text}` };
+      return { text: `Done: ${item.text}` };
     },
   });
 

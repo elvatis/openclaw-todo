@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { expandHome, parseTodos, markDone, addTodo, type TodoItem } from "./index.js";
+import { expandHome, parseTodos, markDone, editTodo, addTodo, type TodoItem } from "./index.js";
 import os from "node:os";
 import path from "node:path";
 
@@ -167,6 +167,83 @@ describe("markDone", () => {
     const item: TodoItem = { lineNo: 0, raw: "  - [ ] Indented", done: false, text: "Indented" };
     const result = markDone(md, item);
     expect(result).toBe("- [x] Indented");
+  });
+});
+
+// ---------------------------------------------------------------------------
+// editTodo
+// ---------------------------------------------------------------------------
+describe("editTodo", () => {
+  it("replaces the text of an open item", () => {
+    const md = "- [ ] Buy milk";
+    const item: TodoItem = { lineNo: 0, raw: "- [ ] Buy milk", done: false, text: "Buy milk" };
+    const result = editTodo(md, item, "Buy oat milk");
+    expect(result).toBe("- [ ] Buy oat milk");
+  });
+
+  it("replaces the text of a done item", () => {
+    const md = "- [x] Buy milk";
+    const item: TodoItem = { lineNo: 0, raw: "- [x] Buy milk", done: true, text: "Buy milk" };
+    const result = editTodo(md, item, "Buy oat milk");
+    expect(result).toBe("- [x] Buy oat milk");
+  });
+
+  it("edits the correct item in a multi-line document", () => {
+    const md = [
+      "# TODO",
+      "- [ ] First",
+      "- [ ] Second",
+      "- [ ] Third",
+    ].join("\n");
+    const item: TodoItem = { lineNo: 2, raw: "- [ ] Second", done: false, text: "Second" };
+    const result = editTodo(md, item, "Updated second");
+    const lines = result.split("\n");
+    expect(lines[1]).toBe("- [ ] First");
+    expect(lines[2]).toBe("- [ ] Updated second");
+    expect(lines[3]).toBe("- [ ] Third");
+  });
+
+  it("preserves done state when editing", () => {
+    const md = [
+      "- [x] Done task",
+      "- [ ] Open task",
+    ].join("\n");
+    const item: TodoItem = { lineNo: 0, raw: "- [x] Done task", done: true, text: "Done task" };
+    const result = editTodo(md, item, "Edited done task");
+    const lines = result.split("\n");
+    expect(lines[0]).toBe("- [x] Edited done task");
+    expect(lines[1]).toBe("- [ ] Open task");
+  });
+
+  it("handles indented items", () => {
+    const md = "  - [ ] Indented task";
+    const item: TodoItem = { lineNo: 0, raw: "  - [ ] Indented task", done: false, text: "Indented task" };
+    const result = editTodo(md, item, "New text");
+    expect(result).toBe("  - [ ] New text");
+  });
+});
+
+// ---------------------------------------------------------------------------
+// editTodo + parseTodos round-trip
+// ---------------------------------------------------------------------------
+describe("editTodo + parseTodos round-trip", () => {
+  it("edits an item and re-parses correctly", () => {
+    const md = [
+      "# TODO",
+      "- [ ] Task A",
+      "- [ ] Task B",
+      "- [ ] Task C",
+    ].join("\n");
+
+    const todos = parseTodos(md);
+    const updated = editTodo(md, todos[1], "Task B edited");
+    const reParsed = parseTodos(updated);
+
+    expect(reParsed).toHaveLength(3);
+    expect(reParsed[0].text).toBe("Task A");
+    expect(reParsed[1].text).toBe("Task B edited");
+    expect(reParsed[2].text).toBe("Task C");
+    expect(reParsed.every((t) => !t.done)).toBe(true);
   });
 });
 

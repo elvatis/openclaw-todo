@@ -56,6 +56,12 @@ export function markDone(md: string, item: TodoItem): string {
   return lines.join("\n");
 }
 
+export function editTodo(md: string, item: TodoItem, newText: string): string {
+  const lines = md.split("\n");
+  lines[item.lineNo] = lines[item.lineNo].replace(/^(\s*-\s*\[[ xX]\]\s*).*$/, `$1${newText}`);
+  return lines.join("\n");
+}
+
 export function addTodo(md: string, text: string, sectionHeader?: string): string {
   const lines = md.split("\n");
   const bullet = `- [ ] ${text}`;
@@ -183,6 +189,38 @@ export default function register(api: any) {
 
       if (doBrainLog) await brainLog(brainStorePath, `done - ${item.text}`);
       return { text: `Done: ${item.text}` };
+    },
+  });
+
+  api.registerCommand({
+    name: "todo-edit",
+    description: "Edit a TODO item's text",
+    requireAuth: false,
+    acceptsArgs: true,
+    handler: async (ctx: any) => {
+      const raw = String(ctx?.args ?? "").trim();
+      const spaceIdx = raw.indexOf(" ");
+      if (!raw || spaceIdx === -1) {
+        return { text: "Usage: /todo-edit <index> <new text> (see /todo-list)" };
+      }
+
+      const idx = Number(raw.slice(0, spaceIdx));
+      const newText = raw.slice(spaceIdx + 1).trim();
+      if (!Number.isFinite(idx) || idx < 1 || !newText) {
+        return { text: "Usage: /todo-edit <index> <new text> (see /todo-list)" };
+      }
+
+      const md = readTodoFile(todoFile);
+      const open = parseTodos(md).filter((t) => !t.done);
+      const item = open[idx - 1];
+      if (!item) return { text: `No open TODO at index ${idx}.` };
+
+      const oldText = item.text;
+      const next = editTodo(md, item, newText);
+      fs.writeFileSync(todoFile, next, "utf-8");
+
+      if (doBrainLog) await brainLog(brainStorePath, `edited - "${oldText}" -> "${newText}"`);
+      return { text: `Edited TODO #${idx}: "${oldText}" -> "${newText}"` };
     },
   });
 

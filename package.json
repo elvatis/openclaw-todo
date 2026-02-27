@@ -5,7 +5,9 @@
   "type": "module",
   "scripts": {
     "build": "tsc",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest"
   },
   "openclaw": {
     "extensions": [
@@ -17,6 +19,7 @@
   },
   "devDependencies": {
     "@types/node": "^25.3.2",
-    "typescript": "^5.9.3"
+    "typescript": "^5.9.3",
+    "vitest": "^4.0.18"
   }
 }

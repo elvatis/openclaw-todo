@@ -4,7 +4,7 @@ import os from "node:os";
 
 import { HashEmbedder, JsonlMemoryStore, uuid, type MemoryItem } from "@elvatis_com/openclaw-memory-core";
 
-function expandHome(p: string): string {
+export function expandHome(p: string): string {
   if (!p) return p;
   if (p === "~") return os.homedir();
   if (p.startsWith("~/")) return path.join(os.homedir(), p.slice(2));
@@ -28,14 +28,14 @@ function readTodoFile(filePath: string): string {
   return fs.readFileSync(filePath, "utf-8");
 }
 
-type TodoItem = {
+export type TodoItem = {
   lineNo: number;
   raw: string;
   done: boolean;
   text: string;
 };
 
-function parseTodos(md: string): TodoItem[] {
+export function parseTodos(md: string): TodoItem[] {
   const lines = md.split("\n");
   const out: TodoItem[] = [];
   for (let i = 0; i < lines.length; i++) {
@@ -49,14 +49,14 @@ function parseTodos(md: string): TodoItem[] {
   return out;
 }
 
-function markDone(md: string, item: TodoItem): string {
+export function markDone(md: string, item: TodoItem): string {
   const lines = md.split("\n");
   const ln = lines[item.lineNo];
   lines[item.lineNo] = ln.replace(/^\s*-\s*\[ \]/, "- [x]");
   return lines.join("\n");
 }
 
-function addTodo(md: string, text: string, sectionHeader?: string): string {
+export function addTodo(md: string, text: string, sectionHeader?: string): string {
   const lines = md.split("\n");
   const bullet = `- [ ] ${text}`;
 

@@ -44,16 +44,17 @@
       "title": "Add TypeScript build configuration (tsconfig.json)",
       "status": "done",
       "depends_on": [],
-      "completed": "2026-02-27T15:22:00.000Z"
+      "completed": "2026-02-27T14:23:46.167Z"
     },
     "T-005": {
       "created": "2026-02-27T23:00:00Z",
       "priority": "high",
       "title": "Add unit tests for core parsing/mutation functions",
-      "status": "ready",
+      "status": "done",
       "depends_on": [
         "T-004"
-      ]
+      ],
+      "completed": "2026-02-27T15:30:00.000Z"
     },
     "T-006": {
       "created": "2026-02-27T23:00:00Z",
@@ -93,7 +94,7 @@
       ]
     }
   },
-  "quick_context": "v0.2 in progress: T-002 (file init), T-003 (i18n/configurable header), T-004 (tsconfig) done. Remaining P1: tests (T-005). P2: edit/remove/tags. P3: search, due dates.",
+  "quick_context": "v0.2 in progress: all P1 tasks done (T-002 file init, T-003 i18n, T-004 tsconfig, T-005 unit tests). Remaining P2: edit/remove/tags. P3: search, due dates.",
   "aahp_version": "3.0",
   "project": "openclaw-todo",
   "token_budget": {
@@ -102,12 +103,12 @@
     "manifest_plus_core": 300
   },
   "last_session": {
-    "timestamp": "2026-02-27T15:22:00.000Z",
+    "timestamp": "2026-02-27T15:30:00.000Z",
     "phase": "implementation",
     "agent": "claude-code",
-    "commit": "def8349",
+    "commit": "pending",
     "duration_minutes": 3,
-    "session_id": "t004-tsconfig"
+    "session_id": "t005-unit-tests"
   },
   "next_task_id": 11
 }

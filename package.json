@@ -3,8 +3,20 @@
   "version": "0.1.2",
   "private": true,
   "type": "module",
-  "openclaw": { "extensions": ["./index.ts"] },
+  "scripts": {
+    "build": "tsc",
+    "typecheck": "tsc --noEmit"
+  },
+  "openclaw": {
+    "extensions": [
+      "./index.ts"
+    ]
+  },
   "dependencies": {
     "@elvatis_com/openclaw-memory-core": "file:../openclaw-memory-core"
+  },
+  "devDependencies": {
+    "@types/node": "^25.3.2",
+    "typescript": "^5.9.3"
   }
 }

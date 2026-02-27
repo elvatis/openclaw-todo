@@ -9,9 +9,9 @@ Adds commands to manage a local markdown TODO list (default: `~/.openclaw/worksp
 
 ## Commands
 
-- `/todo-list` — list open TODO items
-- `/todo-add <text>` — add a new TODO item
-- `/todo-done <index>` — mark an open TODO item done (index from `/todo-list`)
+- `/todo-list` - list open TODO items
+- `/todo-add <text>` - add a new TODO item
+- `/todo-done <index>` - mark an open TODO item done (index from `/todo-list`)
 
 ## Install
 

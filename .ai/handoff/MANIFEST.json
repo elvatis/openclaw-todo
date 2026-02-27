@@ -1,0 +1,36 @@
+{
+  "files": {
+    "NEXT_ACTIONS.md": {
+      "checksum": "sha256:0000000000000000000000000000000000000000000000000000000000000000",
+      "lines": 10,
+      "updated": "2026-02-28T00:00:00Z",
+      "summary": "1 ready task: define v0.2 roadmap items as GitHub issues."
+    }
+  },
+  "tasks": {
+    "T-001": {
+      "created": "2026-02-28T00:00:00Z",
+      "priority": "high",
+      "title": "Define v0.2 roadmap items as GitHub issues and prioritize",
+      "status": "ready",
+      "depends_on": []
+    }
+  },
+  "quick_context": "openclaw-todo initial scaffold complete. v0.2 roadmap definition pending.",
+  "aahp_version": "3.0",
+  "project": "openclaw-todo",
+  "token_budget": {
+    "full_read": 1000,
+    "manifest_only": 100,
+    "manifest_plus_core": 300
+  },
+  "last_session": {
+    "timestamp": "2026-02-28T00:00:00Z",
+    "phase": "planning",
+    "agent": "human",
+    "commit": "",
+    "duration_minutes": 0,
+    "session_id": "scaffold-init"
+  },
+  "next_task_id": 2
+}

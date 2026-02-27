@@ -28,12 +28,40 @@ function readTodoFile(filePath: string): string {
   return fs.readFileSync(filePath, "utf-8");
 }
 
+export type Priority = "high" | "medium" | "low";
+
 export type TodoItem = {
   lineNo: number;
   raw: string;
   done: boolean;
   text: string;
+  tags: string[];
+  priority: Priority | null;
 };
+
+const PRIORITY_RE = /\s*!(high|medium|low)\b/gi;
+const TAG_RE = /#([\w-]+)/g;
+
+export function extractTags(text: string): string[] {
+  const tags: string[] = [];
+  let m: RegExpExecArray | null;
+  TAG_RE.lastIndex = 0;
+  while ((m = TAG_RE.exec(text)) !== null) {
+    const tag = m[1].toLowerCase();
+    if (!tags.includes(tag)) tags.push(tag);
+  }
+  return tags;
+}
+
+export function extractPriority(text: string): Priority | null {
+  PRIORITY_RE.lastIndex = 0;
+  const m = PRIORITY_RE.exec(text);
+  return m ? (m[1].toLowerCase() as Priority) : null;
+}
+
+export function cleanText(text: string): string {
+  return text.replace(PRIORITY_RE, "").replace(TAG_RE, "").replace(/\s{2,}/g, " ").trim();
+}
 
 export function parseTodos(md: string): TodoItem[] {
   const lines = md.split("\n");
@@ -44,7 +72,7 @@ export function parseTodos(md: string): TodoItem[] {
     if (!m) continue;
     const done = m[1].toLowerCase() === "x";
     const text = m[2].trim();
-    out.push({ lineNo: i, raw: ln, done, text });
+    out.push({ lineNo: i, raw: ln, done, text, tags: extractTags(text), priority: extractPriority(text) });
   }
   return out;
 }
@@ -150,7 +178,10 @@ export default function register(api: any) {
       const todos = parseTodos(md).filter((t) => !t.done);
       const top = todos.slice(0, maxListItems);
       if (top.length === 0) return { text: "No open TODOs." };
-      const lines = top.map((t, idx) => `${idx + 1}. ${t.text}`);
+      const lines = top.map((t, idx) => {
+        const pri = t.priority ? `[${t.priority.toUpperCase()}] ` : "";
+        return `${idx + 1}. ${pri}${t.text}`;
+      });
       return { text: `Open TODOs (${todos.length}):\n` + lines.join("\n") };
     },
   });
@@ -272,11 +303,17 @@ export default function register(api: any) {
       const all = parseTodos(md);
       const open = all.filter((t) => !t.done);
       const done = all.filter((t) => t.done);
+      const allTags = [...new Set(open.flatMap((t) => t.tags))].sort();
       return {
         todoFile,
         openCount: open.length,
         doneCount: done.length,
-        open: open.slice(0, limit).map((t) => t.text),
+        open: open.slice(0, limit).map((t) => ({
+          text: t.text,
+          tags: t.tags,
+          priority: t.priority,
+        })),
+        tags: allTags,
       };
     },
   });

@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { expandHome, parseTodos, markDone, editTodo, removeTodo, addTodo, type TodoItem } from "./index.js";
+import { expandHome, parseTodos, markDone, editTodo, removeTodo, addTodo, extractTags, extractPriority, cleanText, type TodoItem } from "./index.js";
 import os from "node:os";
 import path from "node:path";
 
@@ -51,6 +51,8 @@ describe("parseTodos", () => {
       raw: "- [ ] Buy milk",
       done: false,
       text: "Buy milk",
+      tags: [],
+      priority: null,
     });
   });
 
@@ -130,7 +132,7 @@ describe("parseTodos", () => {
 describe("markDone", () => {
   it("marks an open item as done", () => {
     const md = "- [ ] Buy milk";
-    const item: TodoItem = { lineNo: 0, raw: "- [ ] Buy milk", done: false, text: "Buy milk" };
+    const item: TodoItem = { lineNo: 0, raw: "- [ ] Buy milk", done: false, text: "Buy milk", tags: [], priority: null };
     const result = markDone(md, item);
     expect(result).toBe("- [x] Buy milk");
   });
@@ -142,7 +144,7 @@ describe("markDone", () => {
       "- [ ] Second",
       "- [ ] Third",
     ].join("\n");
-    const item: TodoItem = { lineNo: 2, raw: "- [ ] Second", done: false, text: "Second" };
+    const item: TodoItem = { lineNo: 2, raw: "- [ ] Second", done: false, text: "Second", tags: [], priority: null };
     const result = markDone(md, item);
     const lines = result.split("\n");
     expect(lines[1]).toBe("- [ ] First");
@@ -155,7 +157,7 @@ describe("markDone", () => {
       "- [x] Already done",
       "- [ ] To mark",
     ].join("\n");
-    const item: TodoItem = { lineNo: 1, raw: "- [ ] To mark", done: false, text: "To mark" };
+    const item: TodoItem = { lineNo: 1, raw: "- [ ] To mark", done: false, text: "To mark", tags: [], priority: null };
     const result = markDone(md, item);
     const lines = result.split("\n");
     expect(lines[0]).toBe("- [x] Already done");
@@ -164,7 +166,7 @@ describe("markDone", () => {
 
   it("handles indented items", () => {
     const md = "  - [ ] Indented";
-    const item: TodoItem = { lineNo: 0, raw: "  - [ ] Indented", done: false, text: "Indented" };
+    const item: TodoItem = { lineNo: 0, raw: "  - [ ] Indented", done: false, text: "Indented", tags: [], priority: null };
     const result = markDone(md, item);
     expect(result).toBe("- [x] Indented");
   });
@@ -176,14 +178,14 @@ describe("markDone", () => {
 describe("editTodo", () => {
   it("replaces the text of an open item", () => {
     const md = "- [ ] Buy milk";
-    const item: TodoItem = { lineNo: 0, raw: "- [ ] Buy milk", done: false, text: "Buy milk" };
+    const item: TodoItem = { lineNo: 0, raw: "- [ ] Buy milk", done: false, text: "Buy milk", tags: [], priority: null };
     const result = editTodo(md, item, "Buy oat milk");
     expect(result).toBe("- [ ] Buy oat milk");
   });
 
   it("replaces the text of a done item", () => {
     const md = "- [x] Buy milk";
-    const item: TodoItem = { lineNo: 0, raw: "- [x] Buy milk", done: true, text: "Buy milk" };
+    const item: TodoItem = { lineNo: 0, raw: "- [x] Buy milk", done: true, text: "Buy milk", tags: [], priority: null };
     const result = editTodo(md, item, "Buy oat milk");
     expect(result).toBe("- [x] Buy oat milk");
   });
@@ -195,7 +197,7 @@ describe("editTodo", () => {
       "- [ ] Second",
       "- [ ] Third",
     ].join("\n");
-    const item: TodoItem = { lineNo: 2, raw: "- [ ] Second", done: false, text: "Second" };
+    const item: TodoItem = { lineNo: 2, raw: "- [ ] Second", done: false, text: "Second", tags: [], priority: null };
     const result = editTodo(md, item, "Updated second");
     const lines = result.split("\n");
     expect(lines[1]).toBe("- [ ] First");
@@ -208,7 +210,7 @@ describe("editTodo", () => {
       "- [x] Done task",
       "- [ ] Open task",
     ].join("\n");
-    const item: TodoItem = { lineNo: 0, raw: "- [x] Done task", done: true, text: "Done task" };
+    const item: TodoItem = { lineNo: 0, raw: "- [x] Done task", done: true, text: "Done task", tags: [], priority: null };
     const result = editTodo(md, item, "Edited done task");
     const lines = result.split("\n");
     expect(lines[0]).toBe("- [x] Edited done task");
@@ -217,7 +219,7 @@ describe("editTodo", () => {
 
   it("handles indented items", () => {
     const md = "  - [ ] Indented task";
-    const item: TodoItem = { lineNo: 0, raw: "  - [ ] Indented task", done: false, text: "Indented task" };
+    const item: TodoItem = { lineNo: 0, raw: "  - [ ] Indented task", done: false, text: "Indented task", tags: [], priority: null };
     const result = editTodo(md, item, "New text");
     expect(result).toBe("  - [ ] New text");
   });
@@ -253,7 +255,7 @@ describe("editTodo + parseTodos round-trip", () => {
 describe("removeTodo", () => {
   it("removes a single item from a one-item document", () => {
     const md = "- [ ] Only task";
-    const item: TodoItem = { lineNo: 0, raw: "- [ ] Only task", done: false, text: "Only task" };
+    const item: TodoItem = { lineNo: 0, raw: "- [ ] Only task", done: false, text: "Only task", tags: [], priority: null };
     const result = removeTodo(md, item);
     expect(result).toBe("");
   });
@@ -265,7 +267,7 @@ describe("removeTodo", () => {
       "- [ ] Second",
       "- [ ] Third",
     ].join("\n");
-    const item: TodoItem = { lineNo: 2, raw: "- [ ] Second", done: false, text: "Second" };
+    const item: TodoItem = { lineNo: 2, raw: "- [ ] Second", done: false, text: "Second", tags: [], priority: null };
     const result = removeTodo(md, item);
     const lines = result.split("\n");
     expect(lines).toHaveLength(3);
@@ -279,7 +281,7 @@ describe("removeTodo", () => {
       "- [ ] First",
       "- [ ] Second",
     ].join("\n");
-    const item: TodoItem = { lineNo: 0, raw: "- [ ] First", done: false, text: "First" };
+    const item: TodoItem = { lineNo: 0, raw: "- [ ] First", done: false, text: "First", tags: [], priority: null };
     const result = removeTodo(md, item);
     expect(result).toBe("- [ ] Second");
   });
@@ -289,7 +291,7 @@ describe("removeTodo", () => {
       "- [ ] First",
       "- [ ] Second",
     ].join("\n");
-    const item: TodoItem = { lineNo: 1, raw: "- [ ] Second", done: false, text: "Second" };
+    const item: TodoItem = { lineNo: 1, raw: "- [ ] Second", done: false, text: "Second", tags: [], priority: null };
     const result = removeTodo(md, item);
     expect(result).toBe("- [ ] First");
   });
@@ -299,7 +301,7 @@ describe("removeTodo", () => {
       "- [ ] Open",
       "- [x] Done",
     ].join("\n");
-    const item: TodoItem = { lineNo: 1, raw: "- [x] Done", done: true, text: "Done" };
+    const item: TodoItem = { lineNo: 1, raw: "- [x] Done", done: true, text: "Done", tags: [], priority: null };
     const result = removeTodo(md, item);
     expect(result).toBe("- [ ] Open");
   });
@@ -312,7 +314,7 @@ describe("removeTodo", () => {
       "",
       "Some notes",
     ].join("\n");
-    const item: TodoItem = { lineNo: 2, raw: "- [ ] Task", done: false, text: "Task" };
+    const item: TodoItem = { lineNo: 2, raw: "- [ ] Task", done: false, text: "Task", tags: [], priority: null };
     const result = removeTodo(md, item);
     const lines = result.split("\n");
     expect(lines).toEqual(["# TODO", "", "", "Some notes"]);
@@ -483,5 +485,138 @@ describe("addTodo + parseTodos round-trip", () => {
     expect(texts).toContain("Existing");
     expect(texts).toContain("New item");
     expect(todos.every((t) => !t.done)).toBe(true);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// extractTags
+// ---------------------------------------------------------------------------
+describe("extractTags", () => {
+  it("returns empty array for text without tags", () => {
+    expect(extractTags("Buy milk")).toEqual([]);
+  });
+
+  it("extracts a single tag", () => {
+    expect(extractTags("Buy milk #groceries")).toEqual(["groceries"]);
+  });
+
+  it("extracts multiple tags", () => {
+    expect(extractTags("Fix login #dev #backend #urgent")).toEqual(["dev", "backend", "urgent"]);
+  });
+
+  it("lowercases tags", () => {
+    expect(extractTags("Task #DevOps #CI")).toEqual(["devops", "ci"]);
+  });
+
+  it("deduplicates tags", () => {
+    expect(extractTags("Fix #dev and test #dev")).toEqual(["dev"]);
+  });
+
+  it("supports hyphenated tags", () => {
+    expect(extractTags("Deploy #front-end")).toEqual(["front-end"]);
+  });
+
+  it("does not match bare # without word chars", () => {
+    expect(extractTags("Issue # 42")).toEqual([]);
+  });
+
+  it("extracts tags alongside priority markers", () => {
+    expect(extractTags("Task #dev !high #ops")).toEqual(["dev", "ops"]);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// extractPriority
+// ---------------------------------------------------------------------------
+describe("extractPriority", () => {
+  it("returns null for text without priority", () => {
+    expect(extractPriority("Buy milk")).toBeNull();
+  });
+
+  it("extracts !high", () => {
+    expect(extractPriority("Fix bug !high")).toBe("high");
+  });
+
+  it("extracts !medium", () => {
+    expect(extractPriority("Review PR !medium")).toBe("medium");
+  });
+
+  it("extracts !low", () => {
+    expect(extractPriority("Update docs !low")).toBe("low");
+  });
+
+  it("is case-insensitive", () => {
+    expect(extractPriority("Task !HIGH")).toBe("high");
+    expect(extractPriority("Task !Medium")).toBe("medium");
+  });
+
+  it("returns first priority if multiple are present", () => {
+    expect(extractPriority("Task !high !low")).toBe("high");
+  });
+
+  it("does not match !other words", () => {
+    expect(extractPriority("Task !important")).toBeNull();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// cleanText
+// ---------------------------------------------------------------------------
+describe("cleanText", () => {
+  it("returns text unchanged when no markers", () => {
+    expect(cleanText("Buy milk")).toBe("Buy milk");
+  });
+
+  it("removes tags", () => {
+    expect(cleanText("Buy milk #groceries")).toBe("Buy milk");
+  });
+
+  it("removes priority", () => {
+    expect(cleanText("Fix bug !high")).toBe("Fix bug");
+  });
+
+  it("removes both tags and priority", () => {
+    expect(cleanText("Fix login #dev !high #backend")).toBe("Fix login");
+  });
+
+  it("collapses extra whitespace", () => {
+    expect(cleanText("#dev Fix bug !high #backend")).toBe("Fix bug");
+  });
+});
+
+// ---------------------------------------------------------------------------
+// parseTodos with tags and priority
+// ---------------------------------------------------------------------------
+describe("parseTodos with tags/priority", () => {
+  it("parses tags from todo text", () => {
+    const md = "- [ ] Fix login #dev #backend";
+    const result = parseTodos(md);
+    expect(result[0].tags).toEqual(["dev", "backend"]);
+  });
+
+  it("parses priority from todo text", () => {
+    const md = "- [ ] Fix crash !high";
+    const result = parseTodos(md);
+    expect(result[0].priority).toBe("high");
+  });
+
+  it("parses both tags and priority", () => {
+    const md = "- [ ] Deploy service #ops !medium #infra";
+    const result = parseTodos(md);
+    expect(result[0].tags).toEqual(["ops", "infra"]);
+    expect(result[0].priority).toBe("medium");
+  });
+
+  it("returns empty tags and null priority for plain text", () => {
+    const md = "- [ ] Plain task";
+    const result = parseTodos(md);
+    expect(result[0].tags).toEqual([]);
+    expect(result[0].priority).toBeNull();
+  });
+
+  it("preserves full text including markers", () => {
+    const md = "- [ ] Fix bug #dev !high";
+    const result = parseTodos(md);
+    expect(result[0].text).toBe("Fix bug #dev !high");
   });
 });

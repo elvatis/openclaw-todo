@@ -4,9 +4,35 @@ OpenClaw plugin to manage `TODO.md` via chat commands.
 
 ## Commands
 
-- `/todo-list` - show open items
-- `/todo-add <text>` - add an item
+- `/todo-list` - show open items (with priority indicators)
+- `/todo-add <text>` - add an item (supports `#tag` and `!high`/`!medium`/`!low`)
 - `/todo-done <index>` - mark item done
+- `/todo-edit <index> <new text>` - edit an item's text
+- `/todo-remove <index>` - remove an item
+
+## Tags and Priority
+
+Inline tags and priority markers are supported in todo text:
+
+```
+/todo-add Fix login page #dev #frontend !high
+/todo-add Update README #docs !low
+/todo-add Review PR #backend
+```
+
+- **Tags**: `#word` - categorize items (e.g. `#dev`, `#front-end`, `#ops`)
+- **Priority**: `!high`, `!medium`, `!low` - set urgency level
+
+Tags and priorities are parsed automatically and displayed in `/todo-list`:
+
+```
+Open TODOs (3):
+1. [HIGH] Fix login page #dev #frontend !high
+2. [LOW] Update README #docs !low
+3. Review PR #backend
+```
+
+The `todo_status` tool also returns structured `tags` and `priority` fields per item.
 
 ## Tool
 

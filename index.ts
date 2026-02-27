@@ -56,17 +56,30 @@ function markDone(md: string, item: TodoItem): string {
   return lines.join("\n");
 }
 
-function addTodo(md: string, text: string): string {
-  // Add under a preferred section header if found, else append at end.
+function addTodo(md: string, text: string, sectionHeader?: string): string {
   const lines = md.split("\n");
   const bullet = `- [ ] ${text}`;
 
-  // Prefer adding under "Weitere Projektideen" if exists
   let insertAt = -1;
-  for (let i = 0; i < lines.length; i++) {
-    if (lines[i].toLowerCase().includes("weitere projektideen")) {
-      insertAt = i + 1;
-      break;
+
+  if (sectionHeader) {
+    // Insert under the configured section header if found
+    const needle = sectionHeader.toLowerCase();
+    for (let i = 0; i < lines.length; i++) {
+      if (lines[i].toLowerCase().includes(needle)) {
+        insertAt = i + 1;
+        break;
+      }
+    }
+  }
+
+  if (insertAt === -1) {
+    // Fallback: append after the last existing todo item, or at end of file
+    for (let i = lines.length - 1; i >= 0; i--) {
+      if (/^\s*-\s*\[[ x]\]/i.test(lines[i])) {
+        insertAt = i + 1;
+        break;
+      }
     }
   }
 
@@ -75,7 +88,7 @@ function addTodo(md: string, text: string): string {
     return lines.join("\n");
   }
 
-  // Insert after header and potential blank line
+  // Skip blank lines after the header
   while (insertAt < lines.length && lines[insertAt].trim() === "") insertAt++;
   lines.splice(insertAt, 0, bullet);
   return lines.join("\n");
@@ -101,6 +114,7 @@ export default function register(api: any) {
     brainLog?: boolean;
     brainStorePath?: string;
     maxListItems?: number;
+    sectionHeader?: string;
   };
 
   if (cfg.enabled === false) return;
@@ -109,6 +123,7 @@ export default function register(api: any) {
   const doBrainLog = cfg.brainLog !== false;
   const brainStorePath = expandHome(cfg.brainStorePath ?? "~/.openclaw/workspace/memory/brain-memory.jsonl");
   const maxListItems = cfg.maxListItems ?? 30;
+  const sectionHeader = cfg.sectionHeader;
 
   ensureTodoFile(todoFile);
   api.logger?.info?.(`[todo] enabled. file=${todoFile}`);
@@ -138,7 +153,7 @@ export default function register(api: any) {
       if (!text) return { text: "Usage: /todo-add <text>" };
 
       const md = readTodoFile(todoFile);
-      const next = addTodo(md, text);
+      const next = addTodo(md, text, sectionHeader);
       fs.writeFileSync(todoFile, next, "utf-8");
 
       if (doBrainLog) await brainLog(brainStorePath, `added - ${text}`);

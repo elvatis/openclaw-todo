@@ -28,14 +28,15 @@
       "title": "Graceful file init - auto-create TODO.md if missing",
       "status": "done",
       "depends_on": [],
-      "completed": "2026-02-27T14:00:00Z"
+      "completed": "2026-02-27T13:22:35.535Z"
     },
     "T-003": {
       "created": "2026-02-27T23:00:00Z",
       "priority": "high",
       "title": "Remove hardcoded German section header, make configurable",
-      "status": "ready",
-      "depends_on": []
+      "status": "done",
+      "depends_on": [],
+      "completed": "2026-02-27T13:45:00.000Z"
     },
     "T-004": {
       "created": "2026-02-27T23:00:00Z",
@@ -91,7 +92,7 @@
       ]
     }
   },
-  "quick_context": "v0.2 in progress: T-002 (file init) done. Remaining P1: i18n (T-003), tsconfig (T-004), tests (T-005). P2: edit/remove/tags. P3: search, due dates.",
+  "quick_context": "v0.2 in progress: T-002 (file init) and T-003 (i18n/configurable header) done. Remaining P1: tsconfig (T-004), tests (T-005). P2: edit/remove/tags. P3: search, due dates.",
   "aahp_version": "3.0",
   "project": "openclaw-todo",
   "token_budget": {
@@ -100,12 +101,12 @@
     "manifest_plus_core": 300
   },
   "last_session": {
-    "timestamp": "2026-02-27T14:00:00Z",
+    "timestamp": "2026-02-27T13:45:00.000Z",
     "phase": "implementation",
     "agent": "claude-code",
-    "commit": "126d29c",
-    "duration_minutes": 5,
-    "session_id": "t002-graceful-file-init"
+    "commit": "pending",
+    "duration_minutes": 3,
+    "session_id": "t003-configurable-section-header"
   },
   "next_task_id": 11
 }

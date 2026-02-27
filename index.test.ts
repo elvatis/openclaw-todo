@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { expandHome, parseTodos, markDone, editTodo, removeTodo, addTodo, searchTodos, extractTags, extractPriority, cleanText, type TodoItem } from "./index.js";
+import { expandHome, parseTodos, markDone, editTodo, removeTodo, addTodo, searchTodos, extractTags, extractPriority, extractDueDate, cleanText, isOverdue, isDueToday, sortByDueDate, type TodoItem } from "./index.js";
 import os from "node:os";
 import path from "node:path";
 
@@ -53,6 +53,7 @@ describe("parseTodos", () => {
       text: "Buy milk",
       tags: [],
       priority: null,
+      dueDate: null,
     });
   });
 
@@ -100,8 +101,6 @@ describe("parseTodos", () => {
       "- [a] Wrong character",
       "Some - [ ] inline text",
     ].join("\n");
-    // Only "Some - [ ] inline text" would NOT match because it doesn't start with - [ ]
-    // "- [] Missing space" won't match, "- [a] Wrong character" won't match
     const result = parseTodos(md);
     expect(result).toHaveLength(0);
   });
@@ -132,7 +131,7 @@ describe("parseTodos", () => {
 describe("markDone", () => {
   it("marks an open item as done", () => {
     const md = "- [ ] Buy milk";
-    const item: TodoItem = { lineNo: 0, raw: "- [ ] Buy milk", done: false, text: "Buy milk", tags: [], priority: null };
+    const item: TodoItem = { lineNo: 0, raw: "- [ ] Buy milk", done: false, text: "Buy milk", tags: [], priority: null, dueDate: null };
     const result = markDone(md, item);
     expect(result).toBe("- [x] Buy milk");
   });
@@ -144,7 +143,7 @@ describe("markDone", () => {
       "- [ ] Second",
       "- [ ] Third",
     ].join("\n");
-    const item: TodoItem = { lineNo: 2, raw: "- [ ] Second", done: false, text: "Second", tags: [], priority: null };
+    const item: TodoItem = { lineNo: 2, raw: "- [ ] Second", done: false, text: "Second", tags: [], priority: null, dueDate: null };
     const result = markDone(md, item);
     const lines = result.split("\n");
     expect(lines[1]).toBe("- [ ] First");
@@ -157,7 +156,7 @@ describe("markDone", () => {
       "- [x] Already done",
       "- [ ] To mark",
     ].join("\n");
-    const item: TodoItem = { lineNo: 1, raw: "- [ ] To mark", done: false, text: "To mark", tags: [], priority: null };
+    const item: TodoItem = { lineNo: 1, raw: "- [ ] To mark", done: false, text: "To mark", tags: [], priority: null, dueDate: null };
     const result = markDone(md, item);
     const lines = result.split("\n");
     expect(lines[0]).toBe("- [x] Already done");
@@ -166,7 +165,7 @@ describe("markDone", () => {
 
   it("handles indented items", () => {
     const md = "  - [ ] Indented";
-    const item: TodoItem = { lineNo: 0, raw: "  - [ ] Indented", done: false, text: "Indented", tags: [], priority: null };
+    const item: TodoItem = { lineNo: 0, raw: "  - [ ] Indented", done: false, text: "Indented", tags: [], priority: null, dueDate: null };
     const result = markDone(md, item);
     expect(result).toBe("- [x] Indented");
   });
@@ -178,14 +177,14 @@ describe("markDone", () => {
 describe("editTodo", () => {
   it("replaces the text of an open item", () => {
     const md = "- [ ] Buy milk";
-    const item: TodoItem = { lineNo: 0, raw: "- [ ] Buy milk", done: false, text: "Buy milk", tags: [], priority: null };
+    const item: TodoItem = { lineNo: 0, raw: "- [ ] Buy milk", done: false, text: "Buy milk", tags: [], priority: null, dueDate: null };
     const result = editTodo(md, item, "Buy oat milk");
     expect(result).toBe("- [ ] Buy oat milk");
   });
 
   it("replaces the text of a done item", () => {
     const md = "- [x] Buy milk";
-    const item: TodoItem = { lineNo: 0, raw: "- [x] Buy milk", done: true, text: "Buy milk", tags: [], priority: null };
+    const item: TodoItem = { lineNo: 0, raw: "- [x] Buy milk", done: true, text: "Buy milk", tags: [], priority: null, dueDate: null };
     const result = editTodo(md, item, "Buy oat milk");
     expect(result).toBe("- [x] Buy oat milk");
   });
@@ -197,7 +196,7 @@ describe("editTodo", () => {
       "- [ ] Second",
       "- [ ] Third",
     ].join("\n");
-    const item: TodoItem = { lineNo: 2, raw: "- [ ] Second", done: false, text: "Second", tags: [], priority: null };
+    const item: TodoItem = { lineNo: 2, raw: "- [ ] Second", done: false, text: "Second", tags: [], priority: null, dueDate: null };
     const result = editTodo(md, item, "Updated second");
     const lines = result.split("\n");
     expect(lines[1]).toBe("- [ ] First");
@@ -210,7 +209,7 @@ describe("editTodo", () => {
       "- [x] Done task",
       "- [ ] Open task",
     ].join("\n");
-    const item: TodoItem = { lineNo: 0, raw: "- [x] Done task", done: true, text: "Done task", tags: [], priority: null };
+    const item: TodoItem = { lineNo: 0, raw: "- [x] Done task", done: true, text: "Done task", tags: [], priority: null, dueDate: null };
     const result = editTodo(md, item, "Edited done task");
     const lines = result.split("\n");
     expect(lines[0]).toBe("- [x] Edited done task");
@@ -219,7 +218,7 @@ describe("editTodo", () => {
 
   it("handles indented items", () => {
     const md = "  - [ ] Indented task";
-    const item: TodoItem = { lineNo: 0, raw: "  - [ ] Indented task", done: false, text: "Indented task", tags: [], priority: null };
+    const item: TodoItem = { lineNo: 0, raw: "  - [ ] Indented task", done: false, text: "Indented task", tags: [], priority: null, dueDate: null };
     const result = editTodo(md, item, "New text");
     expect(result).toBe("  - [ ] New text");
   });
@@ -255,7 +254,7 @@ describe("editTodo + parseTodos round-trip", () => {
 describe("removeTodo", () => {
   it("removes a single item from a one-item document", () => {
     const md = "- [ ] Only task";
-    const item: TodoItem = { lineNo: 0, raw: "- [ ] Only task", done: false, text: "Only task", tags: [], priority: null };
+    const item: TodoItem = { lineNo: 0, raw: "- [ ] Only task", done: false, text: "Only task", tags: [], priority: null, dueDate: null };
     const result = removeTodo(md, item);
     expect(result).toBe("");
   });
@@ -267,7 +266,7 @@ describe("removeTodo", () => {
       "- [ ] Second",
       "- [ ] Third",
     ].join("\n");
-    const item: TodoItem = { lineNo: 2, raw: "- [ ] Second", done: false, text: "Second", tags: [], priority: null };
+    const item: TodoItem = { lineNo: 2, raw: "- [ ] Second", done: false, text: "Second", tags: [], priority: null, dueDate: null };
     const result = removeTodo(md, item);
     const lines = result.split("\n");
     expect(lines).toHaveLength(3);
@@ -281,7 +280,7 @@ describe("removeTodo", () => {
       "- [ ] First",
       "- [ ] Second",
     ].join("\n");
-    const item: TodoItem = { lineNo: 0, raw: "- [ ] First", done: false, text: "First", tags: [], priority: null };
+    const item: TodoItem = { lineNo: 0, raw: "- [ ] First", done: false, text: "First", tags: [], priority: null, dueDate: null };
     const result = removeTodo(md, item);
     expect(result).toBe("- [ ] Second");
   });
@@ -291,7 +290,7 @@ describe("removeTodo", () => {
       "- [ ] First",
       "- [ ] Second",
     ].join("\n");
-    const item: TodoItem = { lineNo: 1, raw: "- [ ] Second", done: false, text: "Second", tags: [], priority: null };
+    const item: TodoItem = { lineNo: 1, raw: "- [ ] Second", done: false, text: "Second", tags: [], priority: null, dueDate: null };
     const result = removeTodo(md, item);
     expect(result).toBe("- [ ] First");
   });
@@ -301,7 +300,7 @@ describe("removeTodo", () => {
       "- [ ] Open",
       "- [x] Done",
     ].join("\n");
-    const item: TodoItem = { lineNo: 1, raw: "- [x] Done", done: true, text: "Done", tags: [], priority: null };
+    const item: TodoItem = { lineNo: 1, raw: "- [x] Done", done: true, text: "Done", tags: [], priority: null, dueDate: null };
     const result = removeTodo(md, item);
     expect(result).toBe("- [ ] Open");
   });
@@ -314,7 +313,7 @@ describe("removeTodo", () => {
       "",
       "Some notes",
     ].join("\n");
-    const item: TodoItem = { lineNo: 2, raw: "- [ ] Task", done: false, text: "Task", tags: [], priority: null };
+    const item: TodoItem = { lineNo: 2, raw: "- [ ] Task", done: false, text: "Task", tags: [], priority: null, dueDate: null };
     const result = removeTodo(md, item);
     const lines = result.split("\n");
     expect(lines).toEqual(["# TODO", "", "", "Some notes"]);
@@ -560,6 +559,62 @@ describe("extractPriority", () => {
 });
 
 // ---------------------------------------------------------------------------
+// extractDueDate
+// ---------------------------------------------------------------------------
+describe("extractDueDate", () => {
+  it("returns null if no due date is present", () => {
+    expect(extractDueDate("Buy milk")).toBeNull();
+  });
+
+  it("extracts a valid due date", () => {
+    expect(extractDueDate("Buy milk @due(2023-12-31)")).toBe("2023-12-31");
+  });
+
+  it("ignores invalid due date formats", () => {
+    expect(extractDueDate("Buy milk @due(31-12-2023)")).toBeNull();
+  });
+
+  it("is case-insensitive", () => {
+    expect(extractDueDate("Task @DUE(2024-01-15)")).toBe("2024-01-15");
+  });
+
+  it("extracts due date alongside tags and priority", () => {
+    expect(extractDueDate("Fix bug #dev !high @due(2024-03-01)")).toBe("2024-03-01");
+  });
+});
+
+// ---------------------------------------------------------------------------
+// isOverdue
+// ---------------------------------------------------------------------------
+describe("isOverdue", () => {
+  it("returns true when due date is before today", () => {
+    expect(isOverdue("2024-01-01", "2024-01-02")).toBe(true);
+  });
+
+  it("returns false when due date is today", () => {
+    expect(isOverdue("2024-01-01", "2024-01-01")).toBe(false);
+  });
+
+  it("returns false when due date is in the future", () => {
+    expect(isOverdue("2024-01-02", "2024-01-01")).toBe(false);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// isDueToday
+// ---------------------------------------------------------------------------
+describe("isDueToday", () => {
+  it("returns true when due date matches today", () => {
+    expect(isDueToday("2024-01-01", "2024-01-01")).toBe(true);
+  });
+
+  it("returns false when due date is different", () => {
+    expect(isDueToday("2024-01-01", "2024-01-02")).toBe(false);
+    expect(isDueToday("2024-01-02", "2024-01-01")).toBe(false);
+  });
+});
+
+// ---------------------------------------------------------------------------
 // cleanText
 // ---------------------------------------------------------------------------
 describe("cleanText", () => {
@@ -582,10 +637,18 @@ describe("cleanText", () => {
   it("collapses extra whitespace", () => {
     expect(cleanText("#dev Fix bug !high #backend")).toBe("Fix bug");
   });
+
+  it("removes due date annotations", () => {
+    expect(cleanText("Buy milk @due(2023-12-31)")).toBe("Buy milk");
+  });
+
+  it("removes all markers together", () => {
+    expect(cleanText("Fix bug #dev !high @due(2024-03-01)")).toBe("Fix bug");
+  });
 });
 
 // ---------------------------------------------------------------------------
-// parseTodos with tags and priority
+// parseTodos with tags/priority
 // ---------------------------------------------------------------------------
 describe("parseTodos with tags/priority", () => {
   it("parses tags from todo text", () => {
@@ -622,6 +685,97 @@ describe("parseTodos with tags/priority", () => {
 });
 
 // ---------------------------------------------------------------------------
+// parseTodos with due dates
+// ---------------------------------------------------------------------------
+describe("parseTodos with due dates", () => {
+  it("parses a todo with a due date", () => {
+    const md = "- [ ] Buy milk @due(2023-12-31)";
+    const result = parseTodos(md);
+    expect(result).toHaveLength(1);
+    expect(result[0].dueDate).toBe("2023-12-31");
+    expect(result[0].text).toContain("@due(2023-12-31)");
+  });
+
+  it("parses a todo without a due date", () => {
+    const md = "- [ ] Buy milk";
+    const result = parseTodos(md);
+    expect(result).toHaveLength(1);
+    expect(result[0].dueDate).toBeNull();
+  });
+
+  it("handles multiple todos with and without due dates", () => {
+    const md = [
+      "- [ ] Task one",
+      "- [ ] Task two @due(2023-12-31)",
+      "- [ ] Task three",
+    ].join("\n");
+    const result = parseTodos(md);
+    expect(result).toHaveLength(3);
+    expect(result[0].dueDate).toBeNull();
+    expect(result[1].dueDate).toBe("2023-12-31");
+    expect(result[2].dueDate).toBeNull();
+  });
+
+  it("parses due date alongside tags and priority", () => {
+    const md = "- [ ] Fix bug #dev !high @due(2024-03-01)";
+    const result = parseTodos(md);
+    expect(result[0].dueDate).toBe("2024-03-01");
+    expect(result[0].tags).toEqual(["dev"]);
+    expect(result[0].priority).toBe("high");
+  });
+});
+
+// ---------------------------------------------------------------------------
+// sortByDueDate
+// ---------------------------------------------------------------------------
+describe("sortByDueDate", () => {
+  const today = "2024-06-15";
+
+  const items: TodoItem[] = [
+    { lineNo: 0, raw: "", done: false, text: "No due date", tags: [], priority: null, dueDate: null },
+    { lineNo: 1, raw: "", done: false, text: "Future", tags: [], priority: null, dueDate: "2024-07-01" },
+    { lineNo: 2, raw: "", done: false, text: "Overdue", tags: [], priority: null, dueDate: "2024-06-01" },
+    { lineNo: 3, raw: "", done: false, text: "Due today", tags: [], priority: null, dueDate: "2024-06-15" },
+  ];
+
+  it("sorts overdue items first", () => {
+    const sorted = sortByDueDate(items, today);
+    expect(sorted[0].text).toBe("Overdue");
+  });
+
+  it("sorts due-today items second", () => {
+    const sorted = sortByDueDate(items, today);
+    expect(sorted[1].text).toBe("Due today");
+  });
+
+  it("sorts future due dates third", () => {
+    const sorted = sortByDueDate(items, today);
+    expect(sorted[2].text).toBe("Future");
+  });
+
+  it("sorts items without due dates last", () => {
+    const sorted = sortByDueDate(items, today);
+    expect(sorted[3].text).toBe("No due date");
+  });
+
+  it("sorts multiple overdue items by date ascending", () => {
+    const overdueItems: TodoItem[] = [
+      { lineNo: 0, raw: "", done: false, text: "Later overdue", tags: [], priority: null, dueDate: "2024-06-10" },
+      { lineNo: 1, raw: "", done: false, text: "Earlier overdue", tags: [], priority: null, dueDate: "2024-05-01" },
+    ];
+    const sorted = sortByDueDate(overdueItems, today);
+    expect(sorted[0].text).toBe("Earlier overdue");
+    expect(sorted[1].text).toBe("Later overdue");
+  });
+
+  it("does not mutate the original array", () => {
+    const original = [...items];
+    sortByDueDate(items, today);
+    expect(items).toEqual(original);
+  });
+});
+
+// ---------------------------------------------------------------------------
 // searchTodos
 // ---------------------------------------------------------------------------
 describe("searchTodos", () => {
@@ -637,7 +791,6 @@ describe("searchTodos", () => {
   const openItems = allItems.filter((t) => !t.done);
 
   it("returns all items for empty query parts (after trim)", () => {
-    // searchTodos with empty string would early-return no filters
     const result = searchTodos(openItems, "   ");
     expect(result).toHaveLength(openItems.length);
   });
@@ -709,5 +862,50 @@ describe("searchTodos", () => {
     const result = searchTodos(openItems, "Buy coffee");
     expect(result).toHaveLength(1);
     expect(result[0].text).toBe("Buy coffee");
+  });
+});
+
+// ---------------------------------------------------------------------------
+// searchTodos with due date filters
+// ---------------------------------------------------------------------------
+describe("searchTodos with due date filters", () => {
+  const today = "2024-06-15";
+
+  const sampleMd = [
+    "- [ ] Overdue task @due(2024-06-01)",
+    "- [ ] Due today task @due(2024-06-15)",
+    "- [ ] Future task @due(2024-07-01)",
+    "- [ ] No due date task",
+  ].join("\n");
+
+  const items = parseTodos(sampleMd);
+
+  it("@due filters to items with any due date", () => {
+    const result = searchTodos(items, "@due", today);
+    expect(result).toHaveLength(3);
+    expect(result.every((t) => t.dueDate !== null)).toBe(true);
+  });
+
+  it("@overdue filters to only overdue items", () => {
+    const result = searchTodos(items, "@overdue", today);
+    expect(result).toHaveLength(1);
+    expect(result[0].text).toContain("Overdue");
+  });
+
+  it("@today filters to items due today", () => {
+    const result = searchTodos(items, "@today", today);
+    expect(result).toHaveLength(1);
+    expect(result[0].text).toContain("Due today");
+  });
+
+  it("combines @overdue with text filter", () => {
+    const result = searchTodos(items, "@overdue task", today);
+    expect(result).toHaveLength(1);
+    expect(result[0].dueDate).toBe("2024-06-01");
+  });
+
+  it("@overdue returns empty when nothing is overdue", () => {
+    const result = searchTodos(items, "@overdue", "2024-01-01");
+    expect(result).toHaveLength(0);
   });
 });

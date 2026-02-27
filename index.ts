@@ -37,10 +37,12 @@ export type TodoItem = {
   text: string;
   tags: string[];
   priority: Priority | null;
+  dueDate: string | null;
 };
 
 const PRIORITY_RE = /\s*!(high|medium|low)\b/gi;
 const TAG_RE = /#([\w-]+)/g;
+const DUE_DATE_RE = /@due\((\d{4}-\d{2}-\d{2})\)/i;
 
 export function extractTags(text: string): string[] {
   const tags: string[] = [];
@@ -59,8 +61,29 @@ export function extractPriority(text: string): Priority | null {
   return m ? (m[1].toLowerCase() as Priority) : null;
 }
 
+export function extractDueDate(text: string): string | null {
+  DUE_DATE_RE.lastIndex = 0;
+  const m = DUE_DATE_RE.exec(text);
+  return m ? m[1] : null;
+}
+
+export function isOverdue(dueDate: string, today?: string): boolean {
+  const ref = today ?? new Date().toISOString().slice(0, 10);
+  return dueDate < ref;
+}
+
+export function isDueToday(dueDate: string, today?: string): boolean {
+  const ref = today ?? new Date().toISOString().slice(0, 10);
+  return dueDate === ref;
+}
+
 export function cleanText(text: string): string {
-  return text.replace(PRIORITY_RE, "").replace(TAG_RE, "").replace(/\s{2,}/g, " ").trim();
+  return text
+    .replace(PRIORITY_RE, "")
+    .replace(TAG_RE, "")
+    .replace(DUE_DATE_RE, "")
+    .replace(/\s{2,}/g, " ")
+    .trim();
 }
 
 export function parseTodos(md: string): TodoItem[] {
@@ -72,9 +95,30 @@ export function parseTodos(md: string): TodoItem[] {
     if (!m) continue;
     const done = m[1].toLowerCase() === "x";
     const text = m[2].trim();
-    out.push({ lineNo: i, raw: ln, done, text, tags: extractTags(text), priority: extractPriority(text) });
+    out.push({
+      lineNo: i,
+      raw: ln,
+      done,
+      text,
+      tags: extractTags(text),
+      priority: extractPriority(text),
+      dueDate: extractDueDate(text),
+    });
   }
   return out;
+}
+
+export function sortByDueDate(items: TodoItem[], today?: string): TodoItem[] {
+  const ref = today ?? new Date().toISOString().slice(0, 10);
+  return [...items].sort((a, b) => {
+    // Overdue items first, then due today, then future due dates, then no due date
+    const aScore = a.dueDate ? (a.dueDate < ref ? 0 : a.dueDate === ref ? 1 : 2) : 3;
+    const bScore = b.dueDate ? (b.dueDate < ref ? 0 : b.dueDate === ref ? 1 : 2) : 3;
+    if (aScore !== bScore) return aScore - bScore;
+    // Within the same category, sort by date ascending (earliest first)
+    if (a.dueDate && b.dueDate) return a.dueDate.localeCompare(b.dueDate);
+    return 0;
+  });
 }
 
 export function markDone(md: string, item: TodoItem): string {
@@ -96,28 +140,40 @@ export function removeTodo(md: string, item: TodoItem): string {
   return lines.join("\n");
 }
 
-export function searchTodos(items: TodoItem[], query: string): TodoItem[] {
+export function searchTodos(items: TodoItem[], query: string, today?: string): TodoItem[] {
   const parts = query.trim().split(/\s+/);
   const tagFilters: string[] = [];
   const priorityFilters: Priority[] = [];
   const textParts: string[] = [];
+  let dueFilter: "overdue" | "today" | "upcoming" | null = null;
 
   for (const p of parts) {
     if (/^#[\w-]+$/.test(p)) {
       tagFilters.push(p.slice(1).toLowerCase());
     } else if (/^!(high|medium|low)$/i.test(p)) {
       priorityFilters.push(p.slice(1).toLowerCase() as Priority);
+    } else if (/^@due$/i.test(p)) {
+      // @due alone means "has any due date"
+      dueFilter = "upcoming";
+    } else if (/^@overdue$/i.test(p)) {
+      dueFilter = "overdue";
+    } else if (/^@today$/i.test(p)) {
+      dueFilter = "today";
     } else {
       textParts.push(p);
     }
   }
 
   const textQuery = textParts.join(" ").toLowerCase();
+  const ref = today ?? new Date().toISOString().slice(0, 10);
 
   return items.filter((item) => {
     if (tagFilters.length > 0 && !tagFilters.every((tf) => item.tags.includes(tf))) return false;
     if (priorityFilters.length > 0 && (!item.priority || !priorityFilters.includes(item.priority))) return false;
     if (textQuery && !item.text.toLowerCase().includes(textQuery)) return false;
+    if (dueFilter === "overdue" && (!item.dueDate || item.dueDate >= ref)) return false;
+    if (dueFilter === "today" && (!item.dueDate || item.dueDate !== ref)) return false;
+    if (dueFilter === "upcoming" && !item.dueDate) return false;
     return true;
   });
 }
@@ -160,6 +216,17 @@ export function addTodo(md: string, text: string, sectionHeader?: string): strin
   return lines.join("\n");
 }
 
+function formatTodoLine(t: TodoItem, idx: number, today: string): string {
+  const pri = t.priority ? `[${t.priority.toUpperCase()}] ` : "";
+  let dueLabel = "";
+  if (t.dueDate) {
+    if (t.dueDate < today) dueLabel = `(OVERDUE: ${t.dueDate}) `;
+    else if (t.dueDate === today) dueLabel = `(Due today) `;
+    else dueLabel = `(Due: ${t.dueDate}) `;
+  }
+  return `${idx + 1}. ${pri}${dueLabel}${t.text}`;
+}
+
 async function brainLog(storePath: string, text: string): Promise<void> {
   const embedder = new HashEmbedder(256);
   const store = new JsonlMemoryStore({ filePath: storePath, embedder });
@@ -196,30 +263,29 @@ export default function register(api: any) {
 
   api.registerCommand({
     name: "todo-list",
-    description: "List open TODO items",
+    description: "List open TODO items (overdue items shown first)",
     requireAuth: false,
     acceptsArgs: false,
     handler: async () => {
+      const today = new Date().toISOString().slice(0, 10);
       const md = readTodoFile(todoFile);
       const todos = parseTodos(md).filter((t) => !t.done);
-      const top = todos.slice(0, maxListItems);
+      const sorted = sortByDueDate(todos, today);
+      const top = sorted.slice(0, maxListItems);
       if (top.length === 0) return { text: "No open TODOs." };
-      const lines = top.map((t, idx) => {
-        const pri = t.priority ? `[${t.priority.toUpperCase()}] ` : "";
-        return `${idx + 1}. ${pri}${t.text}`;
-      });
+      const lines = top.map((t, idx) => formatTodoLine(t, idx, today));
       return { text: `Open TODOs (${todos.length}):\n` + lines.join("\n") };
     },
   });
 
   api.registerCommand({
     name: "todo-add",
-    description: "Add a TODO item",
+    description: "Add a TODO item (supports @due(YYYY-MM-DD), #tag, !priority)",
     requireAuth: false,
     acceptsArgs: true,
     handler: async (ctx: any) => {
       const text = String(ctx?.args ?? "").trim();
-      if (!text) return { text: "Usage: /todo-add <text>" };
+      if (!text) return { text: "Usage: /todo-add <text> (supports @due(YYYY-MM-DD), #tag, !priority)" };
 
       const md = readTodoFile(todoFile);
       const next = addTodo(md, text, sectionHeader);
@@ -314,22 +380,21 @@ export default function register(api: any) {
 
   api.registerCommand({
     name: "todo-search",
-    description: "Search TODO items by text, #tag, or !priority",
+    description: "Search TODO items by text, #tag, !priority, @due, @overdue, or @today",
     requireAuth: false,
     acceptsArgs: true,
     handler: async (ctx: any) => {
       const query = String(ctx?.args ?? "").trim();
-      if (!query) return { text: "Usage: /todo-search <query> (supports text, #tag, !priority)" };
+      if (!query) return { text: "Usage: /todo-search <query> (supports text, #tag, !priority, @due, @overdue, @today)" };
 
+      const today = new Date().toISOString().slice(0, 10);
       const md = readTodoFile(todoFile);
       const open = parseTodos(md).filter((t) => !t.done);
-      const matches = searchTodos(open, query);
+      const matches = searchTodos(open, query, today);
       if (matches.length === 0) return { text: `No open TODOs matching "${query}".` };
 
-      const lines = matches.slice(0, maxListItems).map((t, idx) => {
-        const pri = t.priority ? `[${t.priority.toUpperCase()}] ` : "";
-        return `${idx + 1}. ${pri}${t.text}`;
-      });
+      const sorted = sortByDueDate(matches, today);
+      const lines = sorted.slice(0, maxListItems).map((t, idx) => formatTodoLine(t, idx, today));
       return { text: `Search results for "${query}" (${matches.length}):\n` + lines.join("\n") };
     },
   });
@@ -343,23 +408,33 @@ export default function register(api: any) {
       additionalProperties: false,
       properties: {
         limit: { type: "number", minimum: 1, maximum: 200, default: 50 },
+        overdue: { type: "boolean", description: "If true, return only overdue items" },
       },
     },
     handler: async (params: any) => {
       const limit = Number(params?.limit ?? 50);
+      const filterOverdue = params?.overdue === true;
+      const today = new Date().toISOString().slice(0, 10);
       const md = readTodoFile(todoFile);
       const all = parseTodos(md);
-      const open = all.filter((t) => !t.done);
+      let open = all.filter((t) => !t.done);
+      if (filterOverdue) {
+        open = open.filter((t) => t.dueDate && t.dueDate < today);
+      }
       const done = all.filter((t) => t.done);
       const allTags = [...new Set(open.flatMap((t) => t.tags))].sort();
+      const overdueCount = all.filter((t) => !t.done && t.dueDate && t.dueDate < today).length;
       return {
         todoFile,
         openCount: open.length,
         doneCount: done.length,
-        open: open.slice(0, limit).map((t) => ({
+        overdueCount,
+        open: sortByDueDate(open, today).slice(0, limit).map((t) => ({
           text: t.text,
           tags: t.tags,
           priority: t.priority,
+          dueDate: t.dueDate,
+          overdue: t.dueDate ? t.dueDate < today : false,
         })),
         tags: allTags,
       };

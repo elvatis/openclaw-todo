@@ -92,13 +92,14 @@
       "created": "2026-02-27T23:00:00Z",
       "priority": "low",
       "title": "Add due date support (@due)",
-      "status": "ready",
+      "status": "done",
       "depends_on": [
         "T-008"
-      ]
+      ],
+      "completed": "2026-02-27T20:10:00.000Z"
     }
   },
-  "quick_context": "v0.2.0 released: all P1+P2 done. T-009 /todo-search command with text, #tag, and !priority filtering. Remaining P3: T-010 due dates.",
+  "quick_context": "v0.3.0 released: all v0.2 roadmap tasks complete. T-010 due date support with @due(YYYY-MM-DD) parsing, overdue-first sorting, @due/@overdue/@today search filters, and overdue filter in todo_status.",
   "aahp_version": "3.0",
   "project": "openclaw-todo",
   "token_budget": {
@@ -107,12 +108,12 @@
     "manifest_plus_core": 300
   },
   "last_session": {
-    "timestamp": "2026-02-27T16:28:00.000Z",
+    "timestamp": "2026-02-27T20:10:00.000Z",
     "phase": "implementation",
     "agent": "claude-code",
-    "commit": "4824f89",
-    "duration_minutes": 3,
-    "session_id": "t009-todo-search"
+    "commit": "pending",
+    "duration_minutes": 5,
+    "session_id": "t010-due-dates"
   },
   "next_task_id": 11
 }

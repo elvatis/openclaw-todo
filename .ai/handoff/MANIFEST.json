@@ -78,14 +78,15 @@
       "title": "Add tag/priority support (#tag, !high)",
       "status": "done",
       "depends_on": [],
-      "completed": "2026-02-27T16:22:00.000Z"
+      "completed": "2026-02-27T15:23:37.124Z"
     },
     "T-009": {
       "created": "2026-02-27T23:00:00Z",
       "priority": "low",
       "title": "Add /todo-search command",
-      "status": "ready",
-      "depends_on": []
+      "status": "done",
+      "depends_on": [],
+      "completed": "2026-02-27T16:28:00.000Z"
     },
     "T-010": {
       "created": "2026-02-27T23:00:00Z",
@@ -97,7 +98,7 @@
       ]
     }
   },
-  "quick_context": "v0.2.0 released: all P1+P2 done. T-008 tag/priority support (#tag, !high/!medium/!low) with parsing, display, and structured output. Remaining P3: T-009 search, T-010 due dates.",
+  "quick_context": "v0.2.0 released: all P1+P2 done. T-009 /todo-search command with text, #tag, and !priority filtering. Remaining P3: T-010 due dates.",
   "aahp_version": "3.0",
   "project": "openclaw-todo",
   "token_budget": {
@@ -106,12 +107,12 @@
     "manifest_plus_core": 300
   },
   "last_session": {
-    "timestamp": "2026-02-27T16:22:00.000Z",
+    "timestamp": "2026-02-27T16:28:00.000Z",
     "phase": "implementation",
     "agent": "claude-code",
-    "commit": "a77d3a2",
-    "duration_minutes": 5,
-    "session_id": "t008-tag-priority"
+    "commit": "pending",
+    "duration_minutes": 3,
+    "session_id": "t009-todo-search"
   },
   "next_task_id": 11
 }

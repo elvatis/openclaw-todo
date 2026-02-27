@@ -9,6 +9,7 @@ OpenClaw plugin to manage `TODO.md` via chat commands.
 - `/todo-done <index>` - mark item done
 - `/todo-edit <index> <new text>` - edit an item's text
 - `/todo-remove <index>` - remove an item
+- `/todo-search <query>` - search items by text, `#tag`, or `!priority`
 
 ## Tags and Priority
 

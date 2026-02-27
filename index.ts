@@ -96,6 +96,32 @@ export function removeTodo(md: string, item: TodoItem): string {
   return lines.join("\n");
 }
 
+export function searchTodos(items: TodoItem[], query: string): TodoItem[] {
+  const parts = query.trim().split(/\s+/);
+  const tagFilters: string[] = [];
+  const priorityFilters: Priority[] = [];
+  const textParts: string[] = [];
+
+  for (const p of parts) {
+    if (/^#[\w-]+$/.test(p)) {
+      tagFilters.push(p.slice(1).toLowerCase());
+    } else if (/^!(high|medium|low)$/i.test(p)) {
+      priorityFilters.push(p.slice(1).toLowerCase() as Priority);
+    } else {
+      textParts.push(p);
+    }
+  }
+
+  const textQuery = textParts.join(" ").toLowerCase();
+
+  return items.filter((item) => {
+    if (tagFilters.length > 0 && !tagFilters.every((tf) => item.tags.includes(tf))) return false;
+    if (priorityFilters.length > 0 && (!item.priority || !priorityFilters.includes(item.priority))) return false;
+    if (textQuery && !item.text.toLowerCase().includes(textQuery)) return false;
+    return true;
+  });
+}
+
 export function addTodo(md: string, text: string, sectionHeader?: string): string {
   const lines = md.split("\n");
   const bullet = `- [ ] ${text}`;
@@ -283,6 +309,28 @@ export default function register(api: any) {
 
       if (doBrainLog) await brainLog(brainStorePath, `removed - ${item.text}`);
       return { text: `Removed TODO: ${item.text}` };
+    },
+  });
+
+  api.registerCommand({
+    name: "todo-search",
+    description: "Search TODO items by text, #tag, or !priority",
+    requireAuth: false,
+    acceptsArgs: true,
+    handler: async (ctx: any) => {
+      const query = String(ctx?.args ?? "").trim();
+      if (!query) return { text: "Usage: /todo-search <query> (supports text, #tag, !priority)" };
+
+      const md = readTodoFile(todoFile);
+      const open = parseTodos(md).filter((t) => !t.done);
+      const matches = searchTodos(open, query);
+      if (matches.length === 0) return { text: `No open TODOs matching "${query}".` };
+
+      const lines = matches.slice(0, maxListItems).map((t, idx) => {
+        const pri = t.priority ? `[${t.priority.toUpperCase()}] ` : "";
+        return `${idx + 1}. ${pri}${t.text}`;
+      });
+      return { text: `Search results for "${query}" (${matches.length}):\n` + lines.join("\n") };
     },
   });
 

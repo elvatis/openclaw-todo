@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { expandHome, parseTodos, markDone, editTodo, removeTodo, addTodo, extractTags, extractPriority, cleanText, type TodoItem } from "./index.js";
+import { expandHome, parseTodos, markDone, editTodo, removeTodo, addTodo, searchTodos, extractTags, extractPriority, cleanText, type TodoItem } from "./index.js";
 import os from "node:os";
 import path from "node:path";
 
@@ -618,5 +618,96 @@ describe("parseTodos with tags/priority", () => {
     const md = "- [ ] Fix bug #dev !high";
     const result = parseTodos(md);
     expect(result[0].text).toBe("Fix bug #dev !high");
+  });
+});
+
+// ---------------------------------------------------------------------------
+// searchTodos
+// ---------------------------------------------------------------------------
+describe("searchTodos", () => {
+  const sampleMd = [
+    "- [ ] Fix login page #dev #frontend !high",
+    "- [ ] Update README #docs !low",
+    "- [ ] Review PR #backend #dev",
+    "- [ ] Buy coffee",
+    "- [x] Done task #dev !medium",
+  ].join("\n");
+
+  const allItems = parseTodos(sampleMd);
+  const openItems = allItems.filter((t) => !t.done);
+
+  it("returns all items for empty query parts (after trim)", () => {
+    // searchTodos with empty string would early-return no filters
+    const result = searchTodos(openItems, "   ");
+    expect(result).toHaveLength(openItems.length);
+  });
+
+  it("matches by text substring (case-insensitive)", () => {
+    const result = searchTodos(openItems, "login");
+    expect(result).toHaveLength(1);
+    expect(result[0].text).toContain("login");
+  });
+
+  it("matches by text substring case-insensitively", () => {
+    const result = searchTodos(openItems, "README");
+    expect(result).toHaveLength(1);
+    expect(result[0].text).toContain("README");
+  });
+
+  it("filters by single tag", () => {
+    const result = searchTodos(openItems, "#dev");
+    expect(result).toHaveLength(2); // Fix login, Review PR
+    expect(result.every((t) => t.tags.includes("dev"))).toBe(true);
+  });
+
+  it("filters by multiple tags (AND logic)", () => {
+    const result = searchTodos(openItems, "#dev #frontend");
+    expect(result).toHaveLength(1);
+    expect(result[0].text).toContain("login");
+  });
+
+  it("filters by priority", () => {
+    const result = searchTodos(openItems, "!high");
+    expect(result).toHaveLength(1);
+    expect(result[0].priority).toBe("high");
+  });
+
+  it("combines tag and text filters", () => {
+    const result = searchTodos(openItems, "#dev login");
+    expect(result).toHaveLength(1);
+    expect(result[0].text).toContain("login");
+  });
+
+  it("combines tag and priority filters", () => {
+    const result = searchTodos(openItems, "#dev !high");
+    expect(result).toHaveLength(1);
+    expect(result[0].text).toContain("login");
+  });
+
+  it("returns empty array when no matches", () => {
+    const result = searchTodos(openItems, "nonexistent");
+    expect(result).toHaveLength(0);
+  });
+
+  it("returns empty when tag filter does not match", () => {
+    const result = searchTodos(openItems, "#zzz");
+    expect(result).toHaveLength(0);
+  });
+
+  it("returns empty when priority does not match any item", () => {
+    const result = searchTodos(openItems, "!medium");
+    // Only the done task has !medium, and openItems excludes done tasks
+    expect(result).toHaveLength(0);
+  });
+
+  it("handles mixed case priority filter", () => {
+    const result = searchTodos(openItems, "!HIGH");
+    expect(result).toHaveLength(1);
+  });
+
+  it("matches text with multiple words", () => {
+    const result = searchTodos(openItems, "Buy coffee");
+    expect(result).toHaveLength(1);
+    expect(result[0].text).toBe("Buy coffee");
   });
 });

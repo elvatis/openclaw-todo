@@ -4,20 +4,13 @@
 
 | Status  | Count |
 |---------|-------|
-| Done    | 12    |
-| Ready   | 8     |
+| Done    | 13    |
+| Ready   | 7     |
 | Blocked | 0     |
 
 ---
 
 ## Ready - Work These Next
-
-### T-012: T-009: Add /todo-search command [medium]
-- **Goal**: Close GitHub issue #9 - feature already implemented
-- **Context**: /todo-search command was implemented in T-009 (commit 4824f89) with text, #tag, and !priority filtering
-- **What to do**: Verify implementation, close GitHub issue #9, mark T-012 done in MANIFEST.json
-- **Files**: `.ai/handoff/MANIFEST.json`
-- **Definition of done**: GitHub issue #9 closed, T-012 marked done
 
 ### T-013: T-008: Add tag/priority support [medium]
 - **Goal**: Close GitHub issue #8 - feature already implemented
@@ -80,8 +73,8 @@ _No blocked tasks._
 
 | Task   | Title                          | Completed  |
 |--------|--------------------------------|------------|
+| T-012  | T-009: Add /todo-search command | 2026-02-28 |
 | T-011  | T-010: Add due date support    | 2026-02-28 |
 | T-010  | Add due date support (@due)    | 2026-02-27 |
 | T-009  | Add /todo-search command       | 2026-02-27 |
 | T-008  | Add tag/priority support       | 2026-02-27 |
-| T-007  | Add /todo-remove command       | 2026-02-27 |

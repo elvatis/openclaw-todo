@@ -4,20 +4,13 @@
 
 | Status  | Count |
 |---------|-------|
-| Done    | 13    |
-| Ready   | 7     |
+| Done    | 14    |
+| Ready   | 6     |
 | Blocked | 0     |
 
 ---
 
 ## Ready - Work These Next
-
-### T-013: T-008: Add tag/priority support [medium]
-- **Goal**: Close GitHub issue #8 - feature already implemented
-- **Context**: Tag (#tag) and priority (!high/!medium/!low) support was implemented in T-008
-- **What to do**: Verify implementation, close GitHub issue #8, mark T-013 done in MANIFEST.json
-- **Files**: `.ai/handoff/MANIFEST.json`
-- **Definition of done**: GitHub issue #8 closed, T-013 marked done
 
 ### T-014: T-007: Add /todo-remove command [medium]
 - **Goal**: Close GitHub issue #7 - feature already implemented
@@ -73,8 +66,8 @@ _No blocked tasks._
 
 | Task   | Title                          | Completed  |
 |--------|--------------------------------|------------|
+| T-013  | T-008: Add tag/priority support | 2026-02-28 |
 | T-012  | T-009: Add /todo-search command | 2026-02-28 |
 | T-011  | T-010: Add due date support    | 2026-02-28 |
 | T-010  | Add due date support (@due)    | 2026-02-27 |
 | T-009  | Add /todo-search command       | 2026-02-27 |
-| T-008  | Add tag/priority support       | 2026-02-27 |

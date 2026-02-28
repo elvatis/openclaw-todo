@@ -58,3 +58,8 @@ All options are set via `pluginConfig` in your OpenClaw config:
 openclaw plugins install -l ~/.openclaw/workspace/openclaw-todo
 openclaw gateway restart
 ```
+
+## Shared Template
+
+For automation that creates GitHub issues, use `src/templates/github-issue-helper.ts`.
+It provides `isValidIssueRepoSlug()`, `resolveIssueRepo()`, and `buildGhIssueCreateCommand()`.
